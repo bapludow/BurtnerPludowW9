@@ -23,14 +23,13 @@ public class test extends JFrame
 	
 	// Attributes
 	private static CSVReader csvreader;
-	private static ArrayList<String[]> data;
-	private static ArrayList<school> schools;
+	private static Schools schools;
 	private static double radius = 40; // set radius for point buffer here
 	
 	private static final long serialVersionUID = 1L;
 	private JMapViewer mapv = null;
 	
-	public test() {
+	public test(Schools schools) {
 		super("A TinyJMapViewer Demo to Get You Started!");
 		setSize(700,700);
 		mapv = new JMapViewer();
@@ -41,41 +40,24 @@ public class test extends JFrame
 					schools.get(i).getCenter().getY()));
 			mapv.addMapMarker(tmp);
 		}
-		//MapMarkerDot ucsb = new MapMarkerDot("UCSB", new Coordinate(34.41254, -119.84813));
-		//mapv.addMapMarker(ucsb);
+
 		mapv.addMouseListener(this);
 		mapv.addMouseMotionListener(this);
 	}
 	
 	public static void main(String[] args) {
-
-		// read the file and split by tabulator
-		ArrayList<String[]> data = new ArrayList<String[]>();
-		ArrayList<school> schools = new ArrayList<school>();
+		Schools schools = new Schools();
 
 		try {
 			csvreader = new CSVReader(new FileReader("schools.csv"), '\t');
-			String[] record = null;
-			while((record = csvreader.readNext()) != null) {
-			data.add(record);
-		}
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+			System.out.println("something went wrong");
 		}
 		
-		// split each record into individual variables and add as a new school
-		for (int i = 0; i < data.size(); i++) {
-			StringTokenizer tokenizer = new StringTokenizer(data.get(i)[0], ",");
-			ArrayList<String> hold = new ArrayList<String>(4);
-			while(tokenizer.hasMoreTokens()) {
-				hold.add(tokenizer.nextToken());
-			}
-			schools.add(new school(hold.get(0), Double.valueOf(hold.get(1)), Double.valueOf(hold.get(2)), hold.get(3), radius));
-		}
+		schools.importData(csvreader, radius);
 		
-		new test().setVisible(true);
+		new test(schools).setVisible(true);
 	}
 	
 	private void updateZoomParameters() {
