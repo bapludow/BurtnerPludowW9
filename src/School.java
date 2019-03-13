@@ -1,19 +1,19 @@
+import org.openstreetmap.gui.jmapviewer.MapMarkerDot;
 
-public class School extends PointBuffer {
+public class School {
 
 	// Attributes
 	private String name;
 	private String type;
-	// lat = y?, lon = x?
+	private MapMarkerDot mapDots;
 	
 	// Constructor
-	public School(String name, double lat, double lon, String type, double radius) {
-		super(new Point(lat,lon), radius);
+	public School(String name, MapMarkerDot mapDot, String type) {
+		this.mapDots = mapDot;
 		this.name = name;
 		this.type = type;
 	}
 
-	// Getters & Setters
 	public String getName() {
 		return name;
 	}
@@ -28,6 +28,16 @@ public class School extends PointBuffer {
 
 	public void setType(String type) {
 		this.type = type;
-	}	
-	
+	}
+
+	public MapMarkerDot getMapDots() {
+		return mapDots;
+	}
+
+	public void setMapDots(MapMarkerDot mapDots) {
+		this.mapDots = mapDots;
+	}
+
+	// Getters & Setters
+
 }

@@ -1,74 +1,87 @@
-/**
- * To do:
- * Set initial display of map
- * Display name on mouse over
- * Only show high schools
- * Change buttons (1 vs 3)
- */
 
-import java.awt.Cursor;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.FileReader;
+import java.util.ArrayList;
 
+import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JPanel;
 
 import org.openstreetmap.gui.jmapviewer.Coordinate;
 import org.openstreetmap.gui.jmapviewer.JMapViewer;
 import org.openstreetmap.gui.jmapviewer.MapMarkerDot;
+import org.openstreetmap.gui.jmapviewer.OsmMercator;
 import org.openstreetmap.gui.jmapviewer.events.JMVCommandEvent;
 import org.openstreetmap.gui.jmapviewer.interfaces.JMapViewerEventListener;
 
 import au.com.bytecode.opencsv.CSVReader;
 
 public class SchoolMap extends JFrame
-	implements JMapViewerEventListener, MouseListener, MouseMotionListener {
+	implements JMapViewerEventListener, MouseMotionListener, ActionListener {
 	
 	// Attributes
-	private static double radius = 40; // set radius for point buffer here
-	private static CSVReader csvreader;
-	private Schools schools;
-	private static final long serialVersionUID = 1L;
-	private JMapViewer mapv = null;
-	private static int numSchools;
+	private double radius = 150; // set radius for name display hover here
 	
+	private JMapViewer mapv = null;
+	private JButton hsButton = new JButton("Only show High Schools");
+	private boolean hsFlag = false;
+	
+	private ArrayList<School> schools = new ArrayList<School>();
+	private CSVReader csvreader;
+	
+	private static final long serialVersionUID = 1L;
+		
 	// Map Constructor
-	public SchoolMap(Schools schools) {
-		super("Santa Barbara Area Schools");
-		setSize(1000,500);
+	public SchoolMap() {
+		super("Los Angeles Area Schools");
+		setSize(1080,720);
+		
+		JPanel main = new JPanel(new BorderLayout());
 		mapv = new JMapViewer();
-		mapv.addJMVListener(this);
-		add(mapv);
+		mapv.setDisplayPosition(new Coordinate(34,-118), 9);
+		main.add(mapv);
+		
+		JPanel button = new JPanel(); // new panel that holds button
+		hsButton.addActionListener(this); // add action listener that listens to this frame
+		button.add(hsButton); // add button to panel
+		main.add(button, BorderLayout.NORTH); // add one panel to other panel
+		
+		add(main, BorderLayout.CENTER);
+		
+		mapv.addMouseMotionListener(this);		
+		
+		try {
+			String[] record = null;
+			csvreader = new CSVReader(new FileReader(new File(SchoolMap.class.getResource("schools.csv").toURI())));
+			
+			while((record = csvreader.readNext()) != null) {
+				String name = new String (record[0]);
+				MapMarkerDot mapDots = new MapMarkerDot(new Coordinate(Double.parseDouble(record[1]), Double.parseDouble(record[2])));
+				mapDots.setBackColor(Color.green);
+				String type = new String (record[3]);
+				schools.add(new School(name, mapDots, type));
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.out.println("something went wrong");
+			}
 		
 		for (int i = 0; i < schools.size(); i++) {
-			MapMarkerDot tmp = new MapMarkerDot(new Coordinate(schools.get(i).getCenter().getX(),
-					schools.get(i).getCenter().getY()));		
-			mapv.addMapMarker(tmp);	
+			mapv.addMapMarker(schools.get(i).getMapDots());
 		}
 		
-		mapv.setDisplayToFitMapMarkers();
-		mapv.setZoom(8);
-
-		mapv.addMouseListener(this);
-		mapv.addMouseMotionListener(this);
+		this.setVisible(true);
+		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);		
 	}
 	
 	public static void main(String[] args) {
-		Schools schools = new Schools();
-
-		try {
-			csvreader = new CSVReader(new FileReader("schools.csv"), '\t');
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-			System.out.println("something went wrong");
-		}
-		
-		schools.importData(csvreader, radius);
-		numSchools = schools.size();
-		
-		new SchoolMap(schools).setVisible(true);
+		new SchoolMap();
 	}
 	
 	private void updateZoomParameters() {
@@ -86,56 +99,47 @@ public class SchoolMap extends JFrame
 
 	@Override
 	public void mouseMoved(MouseEvent e) {
-		java.awt.Point p = e.getPoint();
-		boolean cursorHand = mapv.getAttribution().handleAttributionCursor(p);
-		if(cursorHand) {
-			mapv.setCursor(new Cursor(Cursor.HAND_CURSOR));
-		} else {
-			mapv.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+		Coordinate geo = mapv.getPosition(e.getPoint()); // use map marker instead of current set up so you can use this
+		
+		for (int i = 0; i < schools.size(); i++) {
+			MapMarkerDot tmp = schools.get(i).getMapDots();
+			tmp.setName("");
+			double dist = OsmMercator.getDistance(geo.getLat(), geo.getLon(), tmp.getLat(), tmp.getLon());
+			if(dist < radius) {
+				tmp.setName(schools.get(i).getName());
+			}
 		}
 	}
 
 	@Override
-	public void mouseClicked(MouseEvent e) {	
-// Having issues with making this component work
-//		if (e.getButton() == MouseEvent.BUTTON1) {
-//			Point temp = new Point((double)e.getX(), (double)e.getY());
-//			for (int i = 0; i < numSchools; i++) {
-//		        	if (schools.get(i).isInside(temp)) {
-//		        		MapMarkerDot tmp = new MapMarkerDot(schools.get(i).getName(), new Coordinate(schools.get(i).getCenter().getX(),
-//		    					schools.get(i).getCenter().getY()));
-//		    			mapv.addMapMarker(tmp);
-//		        	}
-//			}
-//		}
-//		
-//		if (e.getButton() == MouseEvent.BUTTON3) {
-//				for (int i = 0; i < numSchools; i++) {
-//					if(schools.get(i).getType() == "High School") {
-//						MapMarkerDot tmp = new MapMarkerDot(new Coordinate(schools.get(i).getCenter().getX(),
-//								schools.get(i).getCenter().getY()));
-//						mapv.addMapMarker(tmp);
-//						}
-//					}
-//				}
-		
-// copied this code of Jano's in just to see if the mouse click component worked at al
-		 if (e.getButton() == MouseEvent.BUTTON1) {
-	  		  MapMarkerDot tmp = new MapMarkerDot("POI", mapv.getPosition(e.getX(), e.getY()));	 
-	  		  mapv.addMapMarker(tmp);
-	        }
+	public void actionPerformed(ActionEvent e) {
+		if(e.getSource() == hsButton) {
+			hsFlag = !hsFlag;
+			mapv.removeAllMapMarkers();
+			
+			if(hsFlag) {
+				hsButton.setText("Show all schools");
+				
+				for (int i = 0; i < schools.size(); i++) {
+					MapMarkerDot tmp = schools.get(i).getMapDots();
+					tmp.setBackColor(Color.blue);
+					
+					if(schools.get(i).getType().equals("High School")) {
+						mapv.addMapMarker(tmp);
+					}
+				}
+				
+			} else {
+				hsButton.setText("Only show High Schools");
+				
+				for (int i = 0; i < schools.size(); i++) {
+					MapMarkerDot tmp = schools.get(i).getMapDots();
+					tmp.setBackColor(Color.green);
+					mapv.addMapMarker(tmp);
+					}
+					
+				}
+			}		
 	}
-
-	@Override
-	public void mouseEntered(MouseEvent arg0) {}
-
-	@Override
-	public void mouseExited(MouseEvent arg0) {}
-
-	@Override
-	public void mousePressed(MouseEvent arg0) {}
-
-	@Override
-	public void mouseReleased(MouseEvent arg0) {}
 
 }
